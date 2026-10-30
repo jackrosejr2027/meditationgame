@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Where the River Turns</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="768" height="448" aria-label="Game view"></canvas>
+
+  <div id="hud" hidden>
+    <div class="hud-tl">
+      <div class="bar hp"><div id="hpFill" class="fill"></div><span class="lbl">Vitality <b id="hpTxt"></b></span></div>
+      <div class="bar br"><div id="brFill" class="fill"></div><span class="lbl">Breath <b id="brTxt"></b></span></div>
+      <div class="bar xp"><div id="xpFill" class="fill"></div></div>
+      <div class="gear"><span id="heroLvl"></span> · <span id="wpn"></span> · <span id="tech"></span></div>
+      <div class="bar cdb"><div id="techCd" class="fill"></div></div>
+    </div>
+    <div class="hud-tr">
+      <canvas id="minimap" width="96" height="64"></canvas>
+    </div>
+    <div class="hud-top">
+      <div id="lvlTxt"></div>
+      <div id="obj"></div>
+      <div id="hint"></div>
+    </div>
+    <div id="boss" hidden>
+      <div id="bossName"></div>
+      <div class="bar bhp"><div id="bossHp" class="fill"></div><span class="lbl">Resolve</span></div>
+      <div class="bar bcalm"><div id="bossCalm" class="fill"></div><span class="lbl">Calm</span></div>
+    </div>
+    <div id="clog" hidden></div>
+  </div>
+
+  <div id="banner" aria-live="polite"></div>
+  <div id="cue" aria-live="polite"></div>
+  <div id="levelIntro" hidden></div>
+  <div id="tileTip" hidden role="status" aria-live="polite"></div>
+  <div id="cookTimer" hidden role="status" aria-live="polite"></div>
+  <div id="sandboxBar" hidden><button class="btn mini" id="sandboxToggle">Meditate · G</button><button class="btn mini" id="sandboxCraft">Craft tools</button><button class="btn mini" id="perspectiveToggle" aria-label="Switch perspective">2D view</button><button class="btn mini" id="fullscreenToggle">Full screen</button><button class="btn mini" id="quickSave">Save JSON</button></div>
+  <input id="saveImport" type="file" accept="application/json,.json" hidden>
+  <div id="tip" hidden></div>
+  <div id="toasts" aria-live="polite"></div>
+
+  <div id="dlg" hidden role="dialog" aria-label="Dialogue">
+    <div id="dlgName"></div>
+    <div id="dlgText"></div>
+    <div id="dlgChoices"></div>
+    <div class="dlg-foot"><span id="dlgMore">▼ Space</span><button class="btn mini" id="dlgSkip">Skip</button></div>
+  </div>
+
+  <div id="touch" hidden>
+    <div id="pad"><div id="knob"></div></div>
+    <div id="tbtns">
+      <button data-t="pause" class="tb small">II</button>
+      <button data-t="cycle" class="tb small">⟳</button>
+      <button data-t="dodge" class="tb">Dodge</button>
+      <button data-t="tech" class="tb">Tech</button>
+      <button data-t="attack" class="tb big">Strike</button>
+      <button data-t="interact" class="tb big">Use</button>
+      <button data-t="meditate" class="tb">G · Meditate</button>
+    </div>
+  </div>
+
+  <div id="panel" hidden></div>
+  <div id="screen" class="screen"></div>
+  <div id="fade"></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+import { JSDOM } from "/tmp/jd/node_modules/jsdom/lib/api.js";
+import fs from "fs";
+const html = fs.readFileSync("/workspace/index.html","utf8").replace(/<script[^>]*><\/script>/,"");
+const dom = new JSDOM(html, { pretendToBeVisual:true });
+const noop=()=>{};
+const ctxProxy = () => new Proxy({}, { get(t,k){ if (k in t) return t[k]; if (k==="measureText") return ()=>({width:10}); if (k==="getImageData"||k==="createImageData") return (x,y,w=1,h=1)=>({data:new Uint8ClampedArray(Math.max(1,w*h*4)),width:w,height:h}); if (k.startsWith("create")) return ()=>({addColorStop:noop}); return noop; }, set(t,k,v){ t[k]=v; return true; } });
+dom.window.HTMLCanvasElement.prototype.getContext = function(){ return ctxProxy(); };
+for (const k of ["window","document","HTMLElement","Event","KeyboardEvent"]) globalThis[k] = k==="window"?dom.window:dom.window[k];
+globalThis.ImageData = class { constructor(d,w,h){ this.data=d; this.width=w; this.height=h; } };
+globalThis.requestAnimationFrame = noop;
+Object.defineProperty(dom.window.HTMLElement.prototype, "offsetParent", { get(){ return this.parentNode; } });
+const errs=[]; const step=(name,fn)=>{ try { fn(); } catch(e){ errs.push(name+": "+e.stack.split("\n").slice(0,3).join(" | ")); } };
+const { UI, settings } = await import("/workspace/js/ui.js");
+const { Game } = await import("/workspace/js/game.js");
+const { LEVELS } = await import("/workspace/js/levels.js");
+const { NPCS } = await import("/workspace/js/npcs.js");
+const ui = new UI(document.getElementById("stage")); const g = new Game(ui); ui.bind(g); ui.applySettings();
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+step("gate", ()=>ui.showGate());
+step("pw", ()=>{ $("#pw").value="riverturns"; $("#gateForm").dispatchEvent(new dom.window.Event("submit",{cancelable:true})); });
+console.log("state after gate:", ui.state);
+step("settings-title", ()=>{ ui.openSettings(); ui.closePanel(); ui.openControls(); ui.closePanel(); });
+step("credits", ()=>{ ui.showCredits(()=>ui.showTitle()); $("#cb").click(); });
+step("new", ()=>$('[data-a="new"]').click());
+step("create", ()=>{ $('[data-p="custom"]').click(); $("#hname").value="Wren"; $("#pron").value="they"; $("#pron").dispatchEvent(new dom.window.Event("change")); $("#go").click(); });
+await sleep(50);
+step("intro", ()=>$("#iskip").click());
+console.log("state:", ui.state, "hero:", g.h && g.h.name, g.h && g.h.pron);
+const answer = ()=>{ let n=0; while (ui.dlg && n++<200) { if (ui.dlg.mode==="choice") { const b=$("#dlgChoices button"); b ? b.click() : ui.endDialog(); } else { ui.dlg.typing=false; ui.advance(); } } };
+// walk through all levels, talk to every npc, open all panels
+for (const L of LEVELS) {
+  step("enter "+L.n, ()=>g.enterLevel(L.n,"entry"));
+  for (let i=0;i<60;i++) step("upd "+L.n, ()=>g.update(1/60));
+  step("post "+L.n, ()=>{}); 
+  step("hud "+L.n, ()=>ui.updateHUD());
+  for (const id of (L.npcs||[])) step("talk "+L.n+" "+id, ()=>{ const o=g.M.objs.find(o=>o.npc===id||o.id===id) || g.M.npcs?.find?.(o=>o.id===id); if (!o) { errs.push("npc obj not found: L"+L.n+" "+id); return; } g.p.x=o.x+1; g.p.y=o.y; g.update(1/60); g.interact(); answer(); if (ui.panel) ui.closePanel(); });
+  step("after "+L.n, ()=>g.update(1/60));
+}
+console.log("talk levels completed:", LEVELS.filter(L=>L.mech==="talk"||L.mech==="craft").map(L=>L.n+(g.run.completed.has(L.n)?"✓":"✗")).join(" "));
+step("pause", ()=>{ ui.openPause(); ui.closePanel(); });
+for (const f of ["openInventory","openJournal","openMap","openSettings","openControls","openRespec"]) step(f, ()=>{ ui[f](); document.querySelectorAll("#panel [data-t],#panel [data-r]").forEach(b=>{ b.click(); }); ui.closePanel(); });
+step("craft", ()=>{ ui.openCraft("hub"); ui.closePanel(); });
+step("ending", ()=>{ ui.ending(); let n=0; while ($("#en") && n++<30) $("#en").click(); });
+await sleep(50);
+console.log(errs.length ? errs.slice(0,30).join("\n") : "UI OK", "\nerrors:", errs.length);
+process.exit(0);

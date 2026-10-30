@@ -1,0 +1,20 @@
+// Portable save/load round-trip without a browser DOM dependency.
+import assert from "node:assert/strict";
+const noop=()=>{};
+const ctx=()=>new Proxy({}, {get(t,k){if(k in t)return t[k];if(k==="measureText")return()=>({width:10});if(k==="createLinearGradient"||k==="createRadialGradient"||k==="createPattern")return()=>({addColorStop:noop});return noop;},set(t,k,v){t[k]=v;return true;}});
+globalThis.document={createElement:()=>({getContext:()=>ctx()}),querySelector:()=>null,documentElement:{style:{setProperty:noop}},body:{classList:{toggle:noop}}};
+globalThis.window={addEventListener:noop};
+globalThis.ImageData=class{constructor(data,width,height){this.data=data;this.width=width;this.height=height;}};
+const {Game}=await import("../js/game.js");
+const {ENEMIES}=await import("../js/data.js");
+const ui={toast:noop,levelBanner:noop,completeCue:noop,combatLog:noop,fade:noop,busy:()=>false,state:"title"};
+const original=new Game(ui);
+original.newRun({name:"Rowan",pres:"boy",pron:"he",look:{hair:"#222",coat:"#57a",skin:"#eb9",style:"short"}});
+original.give("quartz",3);assert.equal(original.setDestination(3,Math.floor(original.p.y)),true);assert.ok(original._walkPath.length>0);original._walkPath=null;original.run.flags.hearth_choice_0="reflection";original.run.hero.xp=17;original.M.state.done=true;original.run.completed.add(1);
+const text=original.saveJSON({mode:"top",reduceMotion:true});
+const restored=new Game(ui),settings={mode:"2.5d",reduceMotion:false};
+assert.equal(restored.loadJSON(text,settings),true);
+assert.equal(restored.h.inv.quartz,3);assert.equal(restored.h.xp,17);assert.equal(restored.run.flags.hearth_choice_0,"reflection");assert.equal(restored.M.state.done,true);assert.equal(restored.run.completed.has(1),true);assert.deepEqual(settings,{mode:"top",reduceMotion:true});
+assert.equal(restored.loadJSON("{not json",settings),false);assert.equal(restored.h.inv.quartz,3);
+const observer={id:"observe-test",type:"skipper",d:ENEMIES.skipper,x:restored.p.x,y:restored.p.y,hx:restored.p.x,hy:restored.p.y,state:"aim",t:0,aggro:false,gone:false,anim:0,hitT:0,vuln:0,calm:0,face:1,hist:[],tx:1,ty:0};restored.M.enemies.push(observer);const vitality=restored.h.vit;restored.resolveEnemyDecision(observer,"observe");for(let i=0;i<400;i++)restored.updateEnemies(1/60);assert.equal(observer.gone,true);assert.equal(restored.h.vit,vitality);
+console.log("SAVE, PATHFINDING, AND OBSERVE SYSTEMS OK");
